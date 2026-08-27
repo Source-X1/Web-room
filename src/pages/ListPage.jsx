@@ -9,6 +9,7 @@ import { formatThaiDate, formatTime } from '../utils/date.js';
 import { useToast } from '../context/ToastContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useSocket } from '../context/SocketContext.jsx';
+import { useConfirm } from '../context/ConfirmContext.jsx';
 
 function formatEquipment(b) {
   const items = b.equipment || [];
@@ -23,6 +24,7 @@ function formatEquipment(b) {
 export default function MyBookingsPage() {
   const { showToast } = useToast();
   const { subscribe } = useSocket();
+  const confirm = useConfirm();
   const [bookings, setBookings] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [meta, setMeta] = useState(null);
@@ -43,7 +45,13 @@ export default function MyBookingsPage() {
   }, [subscribe]);
 
   const cancel = async (id) => {
-    if (!window.confirm('ยืนยันยกเลิกการจอง?')) return;
+    const ok = await confirm({
+      title: 'ยืนยันยกเลิกการจอง',
+      message: 'คุณต้องการยกเลิกการจองนี้ใช่หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้',
+      confirmText: 'ยกเลิกการจอง',
+      variant: 'danger',
+    });
+    if (!ok) return;
     try {
       await api.cancelBooking(id);
       showToast('ยกเลิกการจองสำเร็จ');

@@ -6,6 +6,7 @@ import { api } from '../../api/client.js';
 import { formatThaiDate, formatTime, todayKey } from '../../utils/date.js';
 import TimeSelector, { validateTime } from './TimeSelector.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
+import { useConfirm } from '../../context/ConfirmContext.jsx';
 
 const PURPOSES = ['การเรียนการสอน', 'ประชุม', 'จัดกิจกรรม', 'อื่นๆ'];
 
@@ -54,6 +55,7 @@ function formatConflicts(conflicts) {
 
 export default function BookingModal({ open, onClose, room, draft, meta, onSuccess, mode = 'create', editingBooking = null }) {
   const { showToast } = useToast();
+  const confirm = useConfirm();
   const isEdit = mode === 'edit' && editingBooking;
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -144,9 +146,15 @@ export default function BookingModal({ open, onClose, room, draft, meta, onSucce
     }
   };
 
-  const handleSafeClose = () => {
+  const handleSafeClose = async () => {
     if (step > 1 || form.purpose.length > 0 || form.equipment.length > 0) {
-      if (!window.confirm('ปิดแล้วข้อมูลที่กรอกจะหาย ต้องการปิดหรือไม่?')) return;
+      const ok = await confirm({
+        title: 'ปิดแบบฟอร์ม',
+        message: 'ปิดแล้วข้อมูลที่กรอกจะหายทั้งหมด ต้องการปิดหรือไม่?',
+        confirmText: 'ปิด',
+        variant: 'danger',
+      });
+      if (!ok) return;
     }
     onClose();
   };

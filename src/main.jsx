@@ -6,6 +6,7 @@ import { AuthProvider } from './context/AuthContext.jsx'
 import { ThemeProvider } from './context/ThemeContext.jsx'
 import { ToastProvider } from './context/ToastContext.jsx'
 import { SocketProvider } from './context/SocketContext.jsx'
+import { ConfirmProvider } from './context/ConfirmContext.jsx'
 import './index.css'
 
 createRoot(document.getElementById('root')).render(
@@ -14,9 +15,11 @@ createRoot(document.getElementById('root')).render(
       <ThemeProvider>
         <AuthProvider>
           <ToastProvider>
-            <SocketProvider>
-              <App />
-            </SocketProvider>
+            <ConfirmProvider>
+              <SocketProvider>
+                <App />
+              </SocketProvider>
+            </ConfirmProvider>
           </ToastProvider>
         </AuthProvider>
       </ThemeProvider>

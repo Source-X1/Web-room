@@ -7,6 +7,7 @@ import Modal from '../components/ui/Modal.jsx';
 import Input, { Select } from '../components/ui/Input.jsx';
 import { formatThaiDate, formatTime } from '../utils/date.js';
 import { useToast } from '../context/ToastContext.jsx';
+import { useConfirm } from '../context/ConfirmContext.jsx';
 import { useSocket } from '../context/SocketContext.jsx';
 
 const ROLE_CONFIG = {
@@ -48,6 +49,7 @@ function timeAgo(ts) {
 
 export default function AdminPage() {
   const { showToast } = useToast();
+  const confirm = useConfirm();
   const [activeTab, setActiveTab] = useState('overview');
   const [users, setUsers] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -179,7 +181,13 @@ export default function AdminPage() {
   };
 
   const removeUser = async (id) => {
-    if (!window.confirm('ยืนยันลบผู้ใช้งาน?')) return;
+    const ok = await confirm({
+      title: 'ยืนยันลบผู้ใช้งาน',
+      message: 'คุณต้องการลบบัญชีผู้ใช้งานนี้ออกจากระบบ? การดำเนินการนี้ไม่สามารถย้อนกลับได้',
+      confirmText: 'ลบผู้ใช้งาน',
+      variant: 'danger',
+    });
+    if (!ok) return;
     try {
       await api.deleteUser(id);
       showToast('ลบผู้ใช้งานสำเร็จ');
@@ -261,7 +269,13 @@ export default function AdminPage() {
   };
 
   const deleteRoom = async (id) => {
-    if (!window.confirm('ยืนยันลบห้องนี้?')) return;
+    const ok = await confirm({
+      title: 'ยืนยันลบห้อง',
+      message: 'คุณต้องการลบห้องนี้ออกจากระบบ? การดำเนินการนี้ไม่สามารถย้อนกลับได้',
+      confirmText: 'ลบห้อง',
+      variant: 'danger',
+    });
+    if (!ok) return;
     await api.deleteRoom(id);
     showToast('ลบห้องสำเร็จ');
     loadAll();
