@@ -8,9 +8,11 @@ import BookingModal from '../components/booking/BookingModal.jsx';
 import { Select } from '../components/ui/Input.jsx';
 import { dateFromKey, formatTime, toDateKey } from '../utils/date.js';
 import { useToast } from '../context/ToastContext.jsx';
+import { useSocket } from '../context/SocketContext.jsx';
 
 export default function BookingPage() {
   const { showToast } = useToast();
+  const { subscribe } = useSocket();
   const [meta, setMeta] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewDate, setViewDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
@@ -60,13 +62,22 @@ export default function BookingPage() {
     if (!meta) return;
     loadAvailability();
     loadDayBookings();
-    // poll every 10 seconds for real-time availability
-    const id = setInterval(() => {
+  }, [meta, loadAvailability, loadDayBookings]);
+
+  // Real-time WebSockets: อัปเดตสถานะห้องและตารางจองแบบทันทีทันใด
+  useEffect(() => {
+    const unsub1 = subscribe('BOOKINGS_UPDATED', () => {
       loadAvailability();
       loadDayBookings();
-    }, 10000);
-    return () => clearInterval(id);
-  }, [meta, loadAvailability, loadDayBookings]);
+    });
+    const unsub2 = subscribe('ROOMS_UPDATED', () => {
+      loadAvailability();
+    });
+    return () => {
+      unsub1();
+      unsub2();
+    };
+  }, [subscribe, loadAvailability, loadDayBookings]);
 
   const buildings = useMemo(() => {
     const set = new Set();

@@ -1,28 +1,47 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { api } from '../api/client.js';
 import Card from '../components/ui/Card.jsx';
 import Button from '../components/ui/Button.jsx';
 import { Select } from '../components/ui/Input.jsx';
 import { EmptyState } from '../components/ui/Badge.jsx';
 import { addDaysToKey, startOfWeekKey, formatThaiDate, formatTime, THAI_WEEKDAYS_SHORT, todayKey } from '../utils/date.js';
+import { useSocket } from '../context/SocketContext.jsx';
 
 export default function WeekViewPage() {
+  const { subscribe } = useSocket();
   const [weekStart, setWeekStart] = useState(() => startOfWeekKey(new Date()));
   const [roomFilter, setRoomFilter] = useState('');
   const [rooms, setRooms] = useState([]);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    api.getRooms().then(setRooms);
-  }, []);
-
-  useEffect(() => {
+  const fetchWeekData = useCallback(() => {
     setLoading(true);
     const params = { startDate: weekStart };
     if (roomFilter) params.roomId = roomFilter;
     api.getWeekAvailability(params).then(setData).finally(() => setLoading(false));
   }, [weekStart, roomFilter]);
+
+  useEffect(() => {
+    api.getRooms().then(setRooms);
+  }, []);
+
+  useEffect(() => {
+    fetchWeekData();
+  }, [fetchWeekData]);
+
+  // Real-time WebSockets: อัปเดตข้อมูลตารางรายสัปดาห์ทันทีเมื่อมีการเปลี่ยนแปลง
+  useEffect(() => {
+    const unsub1 = subscribe('BOOKINGS_UPDATED', () => fetchWeekData());
+    const unsub2 = subscribe('ROOMS_UPDATED', () => {
+      api.getRooms().then(setRooms);
+      fetchWeekData();
+    });
+    return () => {
+      unsub1();
+      unsub2();
+    };
+  }, [subscribe, fetchWeekData]);
 
   const today = todayKey();
   const isCurrentWeek = weekStart === startOfWeekKey(new Date());

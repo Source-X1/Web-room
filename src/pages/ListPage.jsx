@@ -8,6 +8,7 @@ import BookingModal from '../components/booking/BookingModal.jsx';
 import { formatThaiDate, formatTime } from '../utils/date.js';
 import { useToast } from '../context/ToastContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useSocket } from '../context/SocketContext.jsx';
 
 function formatEquipment(b) {
   const items = b.equipment || [];
@@ -21,6 +22,7 @@ function formatEquipment(b) {
 
 export default function MyBookingsPage() {
   const { showToast } = useToast();
+  const { subscribe } = useSocket();
   const [bookings, setBookings] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [meta, setMeta] = useState(null);
@@ -34,6 +36,11 @@ export default function MyBookingsPage() {
     api.getRooms().then(setRooms);
     api.getRoomMeta().then(setMeta);
   }, []);
+
+  useEffect(() => {
+    const unsub = subscribe('BOOKINGS_UPDATED', () => load());
+    return () => unsub();
+  }, [subscribe]);
 
   const cancel = async (id) => {
     if (!window.confirm('ยืนยันยกเลิกการจอง?')) return;
@@ -167,19 +174,33 @@ export default function MyBookingsPage() {
 
 export function ListPage() {
   const { isAdmin } = useAuth();
+  const { subscribe } = useSocket();
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [filters, setFilters] = useState({ roomId: '', date: '' });
   const [loading, setLoading] = useState(true);
+
+  const loadBookings = () => {
+    setLoading(true);
+    api.getBookings(filters).then(setBookings).finally(() => setLoading(false));
+  };
 
   useEffect(() => {
     api.getRooms().then(setRooms);
   }, []);
 
   useEffect(() => {
-    setLoading(true);
-    api.getBookings(filters).then(setBookings).finally(() => setLoading(false));
+    loadBookings();
   }, [filters]);
+
+  useEffect(() => {
+    const unsub1 = subscribe('BOOKINGS_UPDATED', () => loadBookings());
+    const unsub2 = subscribe('ROOMS_UPDATED', () => api.getRooms().then(setRooms));
+    return () => {
+      unsub1();
+      unsub2();
+    };
+  }, [subscribe, filters]);
 
   const exportCsv = async () => {
     const res = await api.exportCsv(filters);

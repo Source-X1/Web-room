@@ -1,22 +1,37 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client.js';
 import Card from '../components/ui/Card.jsx';
 import Badge, { EmptyState } from '../components/ui/Badge.jsx';
 import { formatThaiDate, formatTime } from '../utils/date.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useSocket } from '../context/SocketContext.jsx';
 
 export default function DashboardPage() {
   const { isAdmin } = useAuth();
+  const { subscribe } = useSocket();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const load = () => api.getDashboard().then(setData).finally(() => setLoading(false));
-    load();
-    const id = setInterval(load, 30000);
-    return () => clearInterval(id);
+  const fetchDashboard = useCallback(() => {
+    api.getDashboard().then(setData).finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    fetchDashboard();
+  }, [fetchDashboard]);
+
+  // Real-time WebSockets: อัปเดตข้อมูลภาพรวม Dashboard ทันทีเมื่อมีการจองหรืออัปเดตผู้ใช้
+  useEffect(() => {
+    const unsub1 = subscribe('BOOKINGS_UPDATED', () => fetchDashboard());
+    const unsub2 = subscribe('USERS_UPDATED', () => fetchDashboard());
+    const unsub3 = subscribe('ROOMS_UPDATED', () => fetchDashboard());
+    return () => {
+      unsub1();
+      unsub2();
+      unsub3();
+    };
+  }, [subscribe, fetchDashboard]);
 
   if (loading) return <EmptyState>กำลังโหลด...</EmptyState>;
   if (!data) return <EmptyState>ไม่สามารถโหลดข้อมูลได้</EmptyState>;

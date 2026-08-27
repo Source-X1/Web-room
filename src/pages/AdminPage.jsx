@@ -7,6 +7,7 @@ import Modal from '../components/ui/Modal.jsx';
 import Input, { Select } from '../components/ui/Input.jsx';
 import { formatThaiDate, formatTime } from '../utils/date.js';
 import { useToast } from '../context/ToastContext.jsx';
+import { useSocket } from '../context/SocketContext.jsx';
 
 const ROLE_CONFIG = {
   admin: {
@@ -105,11 +106,23 @@ export default function AdminPage() {
     }
   }, [dateRange, showToast]);
 
+  const { subscribe } = useSocket();
+
   useEffect(() => {
     loadAll();
-    const id = setInterval(loadAll, 30000);
-    return () => clearInterval(id);
   }, [loadAll]);
+
+  // Real-time WebSockets: อัปเดตข้อมูลแบบทันทีทันใดเมื่อมีการเปลี่ยนแปลง
+  useEffect(() => {
+    const unsub1 = subscribe('BOOKINGS_UPDATED', () => loadAll());
+    const unsub2 = subscribe('USERS_UPDATED', () => loadAll());
+    const unsub3 = subscribe('ROOMS_UPDATED', () => loadAll());
+    return () => {
+      unsub1();
+      unsub2();
+      unsub3();
+    };
+  }, [subscribe, loadAll]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);

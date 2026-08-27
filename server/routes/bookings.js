@@ -10,6 +10,8 @@ import {
   parseBookingPayload,
 } from '../utils/booking.js';
 
+import { emitEvent, emitToUser } from '../utils/socket.js';
+
 const router = Router();
 
 function getAllActiveBookings(db) {
@@ -22,6 +24,8 @@ function createNotification(db, { userId, bookingId, type, message }) {
     INSERT INTO notifications (id, user_id, booking_id, type, message, is_read, created_at)
     VALUES (?, ?, ?, ?, ?, 0, ?)
   `).run(randomUUID(), userId, bookingId, type, message, Date.now());
+
+  emitToUser(userId, 'NOTIFICATION_NEW', { type, message, bookingId });
 }
 
 router.get('/', authRequired, (req, res) => {
@@ -82,6 +86,7 @@ router.post('/reset', authRequired, adminRequired, (req, res) => {
     details: `รีเซ็ต/ล้างข้อมูลการจองทั้งหมดในระบบจำนวน ${count} รายการ`,
   });
 
+  emitEvent('BOOKINGS_UPDATED');
   res.json({ message: `ล้างข้อมูลการจองทั้งหมดจำนวน ${count} รายการเรียบร้อยแล้ว`, count });
 });
 
@@ -145,6 +150,7 @@ router.post('/recurring', authRequired, (req, res) => {
     }
   }
 
+  emitEvent('BOOKINGS_UPDATED');
   res.status(created.length ? 201 : 409).json({ created, skipped, seriesId });
 });
 
@@ -213,6 +219,7 @@ router.post('/', authRequired, (req, res) => {
   }
 
   const row = db.prepare('SELECT * FROM bookings WHERE id = ?').get(bookingId);
+  emitEvent('BOOKINGS_UPDATED');
   res.status(201).json(parseBookingRow(row));
 });
 
@@ -279,6 +286,7 @@ router.patch('/:id', authRequired, (req, res) => {
   }
 
   const updated = db.prepare('SELECT * FROM bookings WHERE id = ?').get(row.id);
+  emitEvent('BOOKINGS_UPDATED');
   res.json(parseBookingRow(updated));
 });
 
@@ -320,6 +328,7 @@ router.patch('/:id/status', authRequired, adminRequired, (req, res) => {
 
   const updated = db.prepare('SELECT * FROM bookings WHERE id = ?').get(req.params.id);
 
+  emitEvent('BOOKINGS_UPDATED');
   res.json(parseBookingRow(updated));
 });
 
@@ -336,6 +345,7 @@ router.post('/:id/cancel', authRequired, (req, res) => {
 
   db.prepare("UPDATE bookings SET status = 'cancelled', updated_at = ? WHERE id = ?").run(Date.now(), req.params.id);
   const updated = db.prepare('SELECT * FROM bookings WHERE id = ?').get(req.params.id);
+  emitEvent('BOOKINGS_UPDATED');
   res.json(parseBookingRow(updated));
 });
 

@@ -4,6 +4,7 @@ import { authRequired, adminRequired } from '../middleware/auth.js';
 import { SUBJECTS, EQUIPMENT, TIME_WINDOWS } from '../data/constants.js';
 import { isDateKey, addDaysToKey } from '../utils/booking.js';
 import { randomUUID } from 'crypto';
+import { emitEvent } from '../utils/socket.js';
 
 const router = Router();
 
@@ -42,6 +43,7 @@ router.post('/', authRequired, adminRequired, (req, res) => {
   });
 
   const created = db.prepare('SELECT * FROM rooms WHERE id = ?').get(id);
+  emitEvent('ROOMS_UPDATED');
   res.status(201).json(created);
 });
 
@@ -69,6 +71,7 @@ router.patch('/:id', authRequired, adminRequired, (req, res) => {
   });
 
   const updated = db.prepare('SELECT * FROM rooms WHERE id = ?').get(room.id);
+  emitEvent('ROOMS_UPDATED');
   res.json(updated);
 });
 
@@ -86,6 +89,7 @@ router.delete('/:id', authRequired, adminRequired, (req, res) => {
     details: `ลบห้อง ${room.name}`,
   });
 
+  emitEvent('ROOMS_UPDATED');
   res.json({ message: 'ลบห้องสำเร็จ' });
 });
 

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getDb, createAuditLog } from '../db/database.js';
 import { authRequired, adminRequired } from '../middleware/auth.js';
+import { emitEvent } from '../utils/socket.js';
 
 const router = Router();
 
@@ -44,6 +45,7 @@ router.patch('/:id/approve', authRequired, adminRequired, (req, res) => {
     details: `อนุมัติบัญชีผู้ใช้งาน ${user.display_name} (${user.username}) [สิทธิ์/ยศ: ${newRole}]`,
   });
 
+  emitEvent('USERS_UPDATED');
   res.json({ message: 'อนุมัติผู้ใช้งานสำเร็จ' });
 });
 
@@ -74,6 +76,7 @@ router.patch('/:id/role', authRequired, adminRequired, (req, res) => {
     details: `เปลี่ยนยศ/สิทธิ์ผู้ใช้งาน ${user.display_name} (${user.username}) จาก [${user.role}] เป็น [${roleLabels[role] || role}]`,
   });
 
+  emitEvent('USERS_UPDATED');
   res.json({ message: `อัปเดตยศ/สิทธิ์ของ ${user.display_name} เป็น ${roleLabels[role]} เรียบร้อยแล้ว`, role });
 });
 
@@ -95,6 +98,7 @@ router.delete('/:id', authRequired, adminRequired, (req, res) => {
     details: `ลบบัญชีผู้ใช้งาน ${user.display_name} (${user.username})`,
   });
 
+  emitEvent('USERS_UPDATED');
   res.json({ message: 'ลบผู้ใช้งานสำเร็จ' });
 });
 
